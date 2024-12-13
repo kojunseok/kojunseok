@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>날씨 예보</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>날씨 예보 조회</h1>
+    
+    <label for="location">지역을 입력하세요:</label>
+    <input type="text" id="location" placeholder="예: 서울" />
+    <button onclick="getWeather()">날씨 조회</button>
+
+    <div id="weather-info">
+        <h3>날씨 정보:</h3>
+        <p id="weather-result">날씨 정보를 가져오세요.</p>
+    </div>
+
+    <script>
+        function getWeather() {
+            const location = document.getElementById("location").value.trim();
+            if (!location) {
+                alert("지역을 입력하세요.");
+                return;
+            }
+
+            // 지역에 따른 좌표 설정
+            const coordinates = {
+                "서울": { nx: 55, ny: 127 },
+                "부산": { nx: 98, ny: 76 },
+                "대구": { nx: 89, ny: 98 }
+            };
+
+            if (!(location in coordinates)) {
+                alert("지원하지 않는 지역입니다.");
+                return;
+            }
+
+            const { nx, ny } = coordinates[location];
+
+            // 날씨 예보 API 호출   
+            const serviceKey = ;  // 인증키
+            const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?serviceKey=${serviceKey}&pageNo=1&numOfRows=1000&dataType=XML&base_date=20241208&base_time=0600&nx=${nx}&ny=${ny}`;
+
+            // CORS 문제 해결을 위해 fetch 사용
+            fetch(url)
+                .then(response => response.text()) // XML 응답을 텍스트로 처리
+                .then(data => {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(data, "text/xml");
+
+                    // XML 데이터에서 날씨 정보를 추출
+                    const items = xmlDoc.getElementsByTagName("item");
+                    let weatherText = "";
+
+                    Array.from(items).forEach(item => {
+                        const category = item.getElementsByTagName("category")[0].textContent;
+                        const obsrValue = item.getElementsByTagName("obsrValue")[0].textContent;
+
+                        if (category === "PTY") {
+                            weatherText += `강수형태: ${obsrValue === "0" ? "비 없음" : "비 있음"}<br>`;
+                        } else if (category === "REH") {
+                            weatherText += `습도: ${obsrValue}%<br>`;
+                        } else if (category === "T1H") {
+                            weatherText += `기온: ${obsrValue}°C<br>`;
+                        }
+                    });
+
+                    document.getElementById("weather-result").innerHTML = weatherText || "날씨 정보를 불러올 수 없습니다.";
+                })
+                .catch(error => {
+                    document.getElementById("weather-result").innerHTML = "API 요청 실패.";
+                    console.error("Error:", error);
+                });
+        }
+    </script>
+</body>
+</html>
